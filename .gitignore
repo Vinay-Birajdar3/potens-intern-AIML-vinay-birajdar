@@ -14,8 +14,7 @@ venv/
 # Testing
 .pytest_cache/
 
-# Chroma Vector Database
-chroma_db/
+
 
 # Streamlit
 .streamlit/
