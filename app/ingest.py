@@ -21,6 +21,9 @@ embedding_model = HuggingFaceEmbeddings(
 
 
 def load_documents():
+    """
+    Load all PDF documents from the documents directory.
+    """
     loader = PyPDFDirectoryLoader(config.DOCUMENTS_PATH)
     documents = loader.load()
 
@@ -28,9 +31,10 @@ def load_documents():
 
     return documents
 
+
 def split_documents(documents):
     """
-    Split documents into smaller chunks for better retrieval.
+    Split documents into chunks for better retrieval.
     """
 
     text_splitter = RecursiveCharacterTextSplitter(
@@ -52,16 +56,20 @@ def split_documents(documents):
 
     return chunks
 
+
 def create_vector_store(chunks):
     """
-    Create a Chroma vector database from document chunks.
+    Create a fresh Chroma vector database.
     """
 
-    # Delete old database if it exists
     if os.path.exists(config.CHROMA_DB_PATH):
-        shutil.rmtree(config.CHROMA_DB_PATH)
+        try:
+            shutil.rmtree(config.CHROMA_DB_PATH)
+            print("Existing ChromaDB removed.")
+        except Exception as e:
+            print(f"Failed to remove existing ChromaDB: {e}")
+            return None
 
-    # Create Chroma vector database
     vector_db = Chroma.from_documents(
         documents=chunks,
         embedding=embedding_model,
