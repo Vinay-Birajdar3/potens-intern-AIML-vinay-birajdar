@@ -1,7 +1,29 @@
+# Python
 __pycache__/
 *.py[cod]
 *.sqlite3
+
+# Environment Variables
 .env
+
+# Virtual Environments
 .venv/
 venv/
+.venv-1/
+
+# Testing
 .pytest_cache/
+
+# Chroma Vector Database
+chroma_db/
+
+# Streamlit
+.streamlit/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
