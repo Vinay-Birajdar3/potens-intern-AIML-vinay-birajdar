@@ -1,4 +1,4 @@
-"""RAG evaluation backed by DeepEval instead of heuristic similarity scores."""
+"""RAG evaluation backed by DeepEval."""
 
 from __future__ import annotations
 
