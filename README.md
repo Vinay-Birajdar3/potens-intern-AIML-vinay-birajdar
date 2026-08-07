@@ -157,6 +157,25 @@ streamlit run streamlit_app.py
 
 ---
 
+# DeepEval RAG evaluation
+
+DeepEval provides LLM-as-a-judge quality checks for the RAG system. The suite
+uses the configured `GROQ_API_KEY` and evaluates answer relevancy,
+faithfulness, and contextual relevancy. Golden answers also enable contextual
+precision and recall.
+
+```bash
+pip install -r requirements.txt
+python run_deepeval.py
+```
+
+Set `DEEPEVAL_GROQ_MODEL` in `.env` to override the default judge model
+(`llama-3.1-8b-instant`). Results are written to `deepeval_report.json`.
+DeepEval runs outside the `/ask` API path because each metric makes additional
+judge-model calls.
+
+---
+
 # 📡 API Endpoints
 
 ## POST `/ask`

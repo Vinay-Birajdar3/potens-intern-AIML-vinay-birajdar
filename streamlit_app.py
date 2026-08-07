@@ -214,6 +214,11 @@ with tab1:
                             []
                         )
 
+                        evaluation = result.get(
+                            "evaluation",
+                            {}
+                        )
+
                         st.divider()
 
                         st.subheader("🧠 AI Response")
@@ -228,6 +233,53 @@ with tab1:
                             """,
                             unsafe_allow_html=True
                         )
+
+                        st.write("")
+
+                        if evaluation:
+
+                            if evaluation.get("evaluation_status") == "unavailable":
+                                st.warning(evaluation.get("evaluation_error", "DeepEval is unavailable."))
+
+                            st.subheader("📈 RAG Evaluation")
+
+                            st.markdown("### Retrieval Metrics")
+                            retrieval_cols = st.columns(3)
+                            retrieval_items = [
+                                ("Context Precision", evaluation.get("context_precision")),
+                                ("Context Recall", evaluation.get("context_recall")),
+                                ("Context Relevancy", evaluation.get("context_relevancy")),
+                            ]
+                            for col, (label, value) in zip(retrieval_cols, retrieval_items):
+                                col.metric(label, "N/A" if value is None else f"{value:.2f}")
+
+                            st.markdown("### Generation Metrics")
+                            generation_cols = st.columns(3)
+                            generation_items = [
+                                ("Faithfulness", evaluation.get("faithfulness")),
+                                ("Answer Relevancy", evaluation.get("answer_relevancy")),
+                                ("Overall DeepEval", evaluation.get("overall_score")),
+                            ]
+                            for col, (label, value) in zip(generation_cols, generation_items):
+                                col.metric(label, "N/A" if value is None else f"{value:.2f}")
+
+                            st.markdown("### System Metrics")
+                            system_cols = st.columns(3)
+                            system_items = [
+                                ("Latency", evaluation.get("latency_seconds", 0.0)),
+                                ("Eval Latency", evaluation.get("evaluation_latency_seconds")),
+                                ("Cost / Query", evaluation.get("cost_per_query")),
+                            ]
+                            for col, (label, value) in zip(system_cols, system_items):
+                                if value is None:
+                                    col.metric("Cost / Query" if label == "Cost / Query" else label,
+                                               "Not tracked" if label == "Cost / Query" else "N/A")
+                                elif label in {"Latency", "Eval Latency"}:
+                                    col.metric(label, f"{value:.2f} sec")
+                                elif label == "Cost / Query":
+                                    col.metric(label, f"${value:.3f}")
+                                else:
+                                    col.metric(label, f"{value}")
 
                         st.write("")
 

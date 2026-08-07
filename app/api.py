@@ -1,3 +1,5 @@
+import time
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -9,6 +11,7 @@ from app.translation import (
     translate_to_english,
     translate_from_english
 )
+from app.evaluation import evaluate_question
 
 router = APIRouter()
 
@@ -33,6 +36,7 @@ class ContradictRequest(BaseModel):
 
 @router.post("/ask")
 def ask_question(request: AskRequest):
+    start_time = time.perf_counter()
 
     # Detect input language
     language = detect_language(request.question)
@@ -52,12 +56,22 @@ def ask_question(request: AskRequest):
         retrieved_docs
     )
 
+    evaluation = evaluate_question(
+        english_question,
+        retrieved_docs,
+        response,
+        latency_seconds=time.perf_counter() - start_time
+    )
+    evaluation["latency_seconds"] = round(time.perf_counter() - start_time, 3)
+
     # Translate answer back to original language
     if language != "english":
         response["answer"] = translate_from_english(
             response["answer"],
             language
         )
+
+    response["evaluation"] = evaluation
 
     return response
 

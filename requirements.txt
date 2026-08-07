@@ -15,5 +15,6 @@ langchain-chroma
 
 sentence-transformers
 
+deepeval>=4.0.0
 pypdf
 
