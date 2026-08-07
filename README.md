@@ -1,58 +1,103 @@
-# 📄 PolicyLens – Enterprise Document Intelligence (RAG)
+# 📄 PolicyLens – Enterprise Document Intelligence using RAG
 
-PolicyLens is a multilingual **Retrieval-Augmented Generation (RAG)** system that enables users to query enterprise policy documents using natural language. It retrieves relevant information from indexed documents, generates grounded responses using an LLM, and returns supporting citations to ensure transparency and minimize hallucinations.
+PolicyLens is a multilingual **Retrieval-Augmented Generation (RAG)** application that enables users to interact with enterprise policy documents using natural language. The system retrieves semantically relevant document chunks from a vector database, generates grounded responses using **Groq Llama 3.1**, and provides source citations to improve transparency and reduce hallucinations.
 
----
-
-## ✨ Features
-
-* 📄 Document Question Answering using RAG
-* 📚 Citation-based responses (Source, Page & Supporting Snippet)
-* ⚖️ Document Contradiction Detection
-* 🌍 Multilingual Support (English, Hindi & Marathi)
-* 🚫 Hallucination Prevention
-* 💻 FastAPI REST API
-* 🖥️ Streamlit User Interface
-* 🗂️ ChromaDB Vector Database
-* 🤖 Groq LLM Integration
+In addition to document question answering, PolicyLens supports multilingual queries, document contradiction detection, and automated RAG evaluation using **DeepEval**.
 
 ---
 
-## 🛠️ Tech Stack
+# ✨ Features
 
-| Component          | Technology                             |
-| ------------------ | -------------------------------------- |
-| Backend            | FastAPI                                |
-| Frontend           | Streamlit                              |
-| Framework          | LangChain                              |
-| LLM                | Groq (Llama 3.1)                       |
-| Embeddings         | sentence-transformers/all-MiniLM-L6-v2 |
-| Vector Database    | ChromaDB                               |
-| PDF Loader         | PyPDF                                  |
-| Translation        | Deep Translator                        |
-| Language Detection | LangDetect                             |
+- 📄 Enterprise Document Question Answering
+- 📚 Citation-based Responses
+- 🌍 Multilingual Support (English, Hindi & Marathi)
+- ⚖️ Document Contradiction Detection
+- 🚫 Grounded Responses to Reduce Hallucinations
+- 🤖 Groq (Llama 3.1) Integration
+- 🗂️ ChromaDB Vector Database
+- 📊 DeepEval-based RAG Evaluation
+- 💻 FastAPI REST API
+- 🖥️ Streamlit Web Interface
+- 🐳 Docker Support
 
 ---
 
-## 📂 Project Structure
+# 🛠️ Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Backend | FastAPI |
+| Frontend | Streamlit |
+| Framework | LangChain |
+| LLM | Groq (Llama 3.1-8B Instant) |
+| Embeddings | sentence-transformers/all-MiniLM-L6-v2 |
+| Vector Database | ChromaDB |
+| PDF Processing | PyPDF |
+| Translation | Deep Translator |
+| Language Detection | LangDetect |
+| Evaluation | DeepEval |
+| Containerization | Docker |
+
+---
+
+# 🏗️ System Architecture
+
+```text
+                    User Query
+                         │
+                         ▼
+              Language Detection
+                         │
+            (Translate if Required)
+                         │
+                         ▼
+              ChromaDB Retrieval
+                         │
+                         ▼
+         Relevant Document Chunks
+                         │
+                         ▼
+             Groq Llama 3.1 LLM
+                         │
+                         ▼
+        Grounded Answer + Citations
+                         │
+                         ▼
+              DeepEval Evaluation
+```
+
+---
+
+# 📂 Project Structure
 
 ```text
 potens-intern-ai-vinay/
-
 │
 ├── app/
 │   ├── api.py
 │   ├── config.py
 │   ├── contradiction.py
+│   ├── deepeval_integration.py
+│   ├── evaluation.py
 │   ├── ingest.py
 │   ├── main.py
 │   ├── prompts.py
 │   ├── rag.py
 │   ├── retrieval.py
-│   └── translation.py
+│   ├── translation.py
+│   ├── utils.py
+│   └── __init__.py
 │
+├── chroma_db/
 ├── documents/
+├── tests/
+│   └── test_evaluation.py
+│
 ├── streamlit_app.py
+├── run_deepeval.py
+├── docker-compose.yml
+├── Dockerfile.backend
+├── Dockerfile.frontend
 ├── requirements.txt
 ├── README.md
 └── .env
@@ -60,9 +105,9 @@ potens-intern-ai-vinay/
 
 ---
 
-# ⚙️ Setup
+# ⚙️ Installation
 
-## 1. Clone Repository
+## 1. Clone the Repository
 
 ```bash
 git clone https://github.com/Vinay-Birajdar3/potens-intern-AIML-vinay-birajdar.git
@@ -72,13 +117,13 @@ cd potens-intern-ai-vinay
 
 ---
 
-## 2. Create Virtual Environment
+## 2. Create a Virtual Environment
 
 ```bash
 python -m venv .venv
 ```
 
-### Activate
+### Activate the Environment
 
 **Windows**
 
@@ -102,7 +147,9 @@ pip install -r requirements.txt
 
 ---
 
-## 4. Create `.env`
+## 4. Configure Environment Variables
+
+Create a `.env` file in the project root.
 
 ```env
 GROQ_API_KEY=YOUR_GROQ_API_KEY
@@ -114,34 +161,38 @@ EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 CHROMA_DB_PATH=./chroma_db
 
 DOCUMENTS_PATH=./documents
+
+DEEPEVAL_GROQ_MODEL=llama-3.1-8b-instant
 ```
 
 ---
 
-# 📚 Build Vector Database
+# 📚 Build the Vector Database
 
-Run:
+Generate embeddings and store them in ChromaDB.
 
 ```bash
 python -m app.ingest
 ```
 
-This will:
+This process:
 
-* Load PDF documents
-* Split documents into chunks
-* Generate embeddings
-* Store vectors in ChromaDB
+- Loads PDF documents
+- Splits documents into semantic chunks
+- Generates vector embeddings
+- Stores vectors in ChromaDB
 
 ---
 
-# 🚀 Run FastAPI
+# 🚀 Running the Application
+
+## Start FastAPI Backend
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-Swagger Documentation:
+Swagger Documentation
 
 ```text
 http://127.0.0.1:8000/docs
@@ -149,59 +200,64 @@ http://127.0.0.1:8000/docs
 
 ---
 
-# 🖥️ Run Streamlit
+## Start Streamlit Frontend
 
 ```bash
 streamlit run streamlit_app.py
 ```
 
----
+Open
 
-# DeepEval RAG evaluation
-
-DeepEval provides LLM-as-a-judge quality checks for the RAG system. The suite
-uses the configured `GROQ_API_KEY` and evaluates answer relevancy,
-faithfulness, and contextual relevancy. Golden answers also enable contextual
-precision and recall.
-
-```bash
-pip install -r requirements.txt
-python run_deepeval.py
+```text
+http://localhost:8501
 ```
 
-Set `DEEPEVAL_GROQ_MODEL` in `.env` to override the default judge model
-(`llama-3.1-8b-instant`). Results are written to `deepeval_report.json`.
-DeepEval runs outside the `/ask` API path because each metric makes additional
-judge-model calls.
+---
+
+# 🐳 Run with Docker
+
+Build and start both backend and frontend using Docker Compose.
+
+```bash
+docker-compose up --build
+```
 
 ---
 
 # 📡 API Endpoints
 
-## POST `/ask`
+## `POST /ask`
 
-Ask questions from the indexed documents.
+Retrieves relevant information from indexed documents and generates a grounded response with supporting citations.
 
 ### Request
 
 ```json
 {
-  "question": "Who does this policy apply to?"
+  "question": "Who is responsible for approving business travel?"
 }
 ```
 
-### Returns
+### Response
 
-* Answer
-* Source Document
-* Page Number
-* Supporting Snippet
+```json
+{
+  "answer": "Business travel requires prior approval from the reporting manager.",
+  "citations": [
+    {
+      "source": "travel_policy.pdf",
+      "page": 5,
+      "snippet": "Business travel requires prior approval..."
+    }
+  ]
+}
+```
 
 ---
 
-## POST `/contradict`
+## `POST /contradict`
 
-Compare two documents for contradictions on a given topic.
+Compares two enterprise policy documents and identifies contradictions for a given topic.
 
 ### Request
 
@@ -213,132 +269,164 @@ Compare two documents for contradictions on a given topic.
 }
 ```
 
-### Returns
+### Response
 
-* Conflict Status
-* Reason
-
----
-
-# 🧩 Chunking Strategy
-
-Documents are split using **LangChain RecursiveCharacterTextSplitter**.
-
-### Configuration
-
-* **Chunk Size:** 1000 characters
-* **Chunk Overlap:** 200 characters
-
-### Why this strategy?
-
-* Preserves context across chunk boundaries.
-* Improves semantic retrieval quality.
-* Prevents important information from being split abruptly.
-* Produces meaningful context while keeping prompts efficient.
-
-Each chunk stores metadata including:
-
-* Source Document
-* Page Number
-
-These metadata are later returned as citations.
+```json
+{
+  "conflict": true,
+  "reason": "The approval process differs between the two documents."
+}
+```
 
 ---
 
-# 📚 Citation Strategy
+# 📊 DeepEval RAG Evaluation
 
-Every generated answer includes:
+PolicyLens includes an automated evaluation pipeline built using **DeepEval** to measure the quality of Retrieval-Augmented Generation (RAG) responses.
 
-* Source Document
-* Page Number
-* Supporting Snippet
+The evaluation runs independently from the production API using a benchmark dataset (golden questions).
 
-This allows users to verify every answer against the original document, ensuring transparency and trustworthiness.
+### Metrics Evaluated
+
+- ✅ Answer Relevancy
+- ✅ Faithfulness
+- ✅ Contextual Precision
+- ✅ Contextual Recall
+
+Run the evaluation:
+
+```bash
+python run_deepeval.py
+```
+
+Results are generated in:
+
+```text
+deepeval_report.json
+```
+
+The evaluation follows an **LLM-as-a-Judge** approach where an LLM evaluates the generated answer against the retrieved context and expected response.
+
+---
+
+# 🧪 Testing
+
+Run project tests:
+
+```bash
+pytest tests/
+```
+
+Run RAG evaluation:
+
+```bash
+python run_deepeval.py
+```
+
+---
+
+# 🔄 RAG Workflow
+
+```text
+                 User Question
+                       │
+                       ▼
+            Language Detection
+                       │
+        Translate (if required)
+                       │
+                       ▼
+          ChromaDB Similarity Search
+                       │
+                       ▼
+        Relevant Document Chunks
+                       │
+                       ▼
+            Groq (Llama 3.1)
+                       │
+                       ▼
+       Grounded Answer + Citations
+                       │
+                       ▼
+            DeepEval Evaluation
+```
 
 ---
 
 # 🌍 Multilingual Support
 
-Supported Languages:
+Supported Languages
 
-* English
-* Hindi
-* Marathi
+- English
+- Hindi
+- Marathi
 
-### Workflow
+### Processing Pipeline
 
-1. Detect query language.
+1. Detect input language.
 2. Translate to English (if required).
 3. Retrieve relevant document chunks.
-4. Generate grounded answer.
+4. Generate a grounded answer.
 5. Translate the response back to the user's language.
 
 ---
 
 # 🚫 Hallucination Prevention
 
-The system follows a retrieval-first approach to minimize hallucinations.
+PolicyLens minimizes hallucinations by following a **retrieval-first** architecture.
 
-* Answers are generated **only** from retrieved document context.
-* External knowledge is not used.
-* If the requested information is unavailable, the system explicitly responds:
+- Answers are generated only from retrieved document context.
+- Every response includes supporting citations.
+- External knowledge is not used while answering document-specific questions.
+- If supporting evidence is unavailable, the system returns:
 
 > **"The provided documents do not contain sufficient information."**
 
 ---
 
-# 🔄 System Workflow
-
-1. User submits a question.
-2. Documents are searched using vector similarity.
-3. Relevant chunks are retrieved from ChromaDB.
-4. Groq LLM generates an answer using only the retrieved context.
-5. The answer is returned along with supporting citations.
-
----
-
 # 🚀 Future Improvements
 
-* Hybrid Search (BM25 + Dense Retrieval)
-* Confidence Score
-* Cross-Encoder Re-ranking
-* User Authentication
-* Conversation Memory
-* Document Upload
-* Docker Deployment
-* Production Logging & Monitoring
+- Hybrid Search (BM25 + Dense Retrieval)
+- Cross-Encoder Re-ranking
+- Confidence Score for Responses
+- Conversation Memory
+- Document Upload Support
+- Authentication & Authorization
+- LangSmith Observability
+- CI/CD Evaluation Pipeline
+- Kubernetes Deployment
 
 ---
 
-# 📝 Approach Summary
+# 📝 Project Summary
 
-PolicyLens implements a Retrieval-Augmented Generation (RAG) pipeline for enterprise document question answering. PDF documents are parsed, divided into overlapping chunks using LangChain's RecursiveCharacterTextSplitter, embedded using the `all-MiniLM-L6-v2` model, and stored in ChromaDB. During querying, the system retrieves the most relevant chunks before passing them to the Groq LLM, ensuring responses are grounded only in retrieved context. The application supports multilingual queries, citation-based responses, contradiction detection between documents, and explicit fallback responses when supporting evidence is unavailable, reducing hallucinations while improving answer reliability.
+PolicyLens is an enterprise document intelligence system built using a **Retrieval-Augmented Generation (RAG)** architecture. Enterprise policy documents are parsed, chunked using LangChain's `RecursiveCharacterTextSplitter`, embedded using the `sentence-transformers/all-MiniLM-L6-v2` model, and stored in **ChromaDB** for semantic retrieval.
 
----
+During querying, the application retrieves the most relevant document chunks before generating grounded responses using **Groq Llama 3.1**, ensuring that every answer is supported by retrieved evidence and accompanied by source citations.
 
-# ✅ Assignment Checklist
+Beyond document question answering, the project provides:
 
-* ✔️ Ingest, Chunk, Embed & Store Documents
-* ✔️ Explained Chunking Strategy
-* ✔️ `/ask` Endpoint with Citations
-* ✔️ `/contradict` Endpoint
-* ✔️ Multilingual Query Support
-* ✔️ Streamlit User Interface
-* ✔️ Hallucination Prevention
-* ✔️ ChromaDB Vector Store
-* ✔️ Groq LLM Integration
+- 🌍 Multilingual document querying
+- ⚖️ Policy contradiction detection
+- 📚 Citation-based responses
+- 📊 DeepEval-powered RAG evaluation
+
+The evaluation pipeline measures answer quality using metrics such as **Answer Relevancy**, **Faithfulness**, **Contextual Precision**, and **Contextual Recall**, helping validate the reliability of the RAG system.
 
 ---
 
-# 🤖 AI Use Log
+# 📌 Key Highlights
 
-| AI Tool              |         Approximate Usage | Purpose                                                                                                                                                                                                                                              |
-| -------------------- | ------------------------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **ChatGPT (OpenAI)** |         ~300–400 messages | Assisted with project architecture, RAG pipeline design, FastAPI implementation, Streamlit UI development, multilingual support, contradiction detection, debugging, prompt engineering, documentation, README preparation, and deployment guidance. |
-| **GitHub Copilot**   | ~100–150 code completions | Assisted with boilerplate code generation, import suggestions, repetitive code completion, syntax assistance, and improving development productivity during implementation.                                                                          |
-
-**Declaration:** AI tools were used to accelerate development, debugging, and documentation. All architectural decisions, code integration, testing, validation, and the final implementation were completed and verified by the project author.
-
+- Enterprise Document Intelligence
+- Retrieval-Augmented Generation (RAG)
+- Semantic Search using ChromaDB
+- Groq Llama 3.1 Integration
+- DeepEval-based RAG Evaluation
+- FastAPI REST API
+- Streamlit Frontend
+- Multilingual Support
+- Citation-based Responses
+- Docker Support
 
 ---
 
@@ -346,6 +434,15 @@ PolicyLens implements a Retrieval-Augmented Generation (RAG) pipeline for enterp
 
 **Vinay Birajdar**
 
-AI/ML Engineering Internship Assignment
+**Bachelor of Engineering – Artificial Intelligence & Data Science**
 
-**Potens IT Services and Consultancy Pvt. Ltd. (2026)**
+
+**GitHub**  
+https://github.com/Vinay-Birajdar3
+
+**LinkedIn**  
+https://www.linkedin.com/in/vinay-birajdar-240b642b7
+
+---
+
+⭐ If you found this project useful, consider giving the repository a star!
