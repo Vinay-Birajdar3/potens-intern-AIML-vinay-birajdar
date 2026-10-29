@@ -9,6 +9,8 @@ from __future__ import annotations
 import os
 from typing import Any, Iterable
 
+from app import config
+
 
 class DeepEvalSetupError(RuntimeError):
     """Raised when DeepEval or its required judge configuration is missing."""
@@ -53,7 +55,7 @@ def build_groq_judge(model_name: str | None = None):
     base_model = modules["DeepEvalBaseLLM"]
     # Match the application's Groq model by default. A larger judge can still
     # be selected explicitly with DEEPEVAL_GROQ_MODEL.
-    selected_model = model_name or os.getenv("DEEPEVAL_GROQ_MODEL", "llama-3.1-8b-instant")
+    selected_model = model_name or os.getenv("DEEPEVAL_GROQ_MODEL", config.GROQ_MODEL)
 
     class GroqJudge(base_model):
         def __init__(self):

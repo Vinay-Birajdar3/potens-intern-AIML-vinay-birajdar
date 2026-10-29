@@ -15,11 +15,10 @@ Instructions:
 
 5. Never add facts, assumptions, or external knowledge that are not present in the retrieved context.
 
-6. If the retrieved context does not contain enough information to answer the question, reply exactly:
+6. If the retrieved context does not contain enough information, use the exact
+fallback response provided in the user's request.
 
-"The provided documents do not contain sufficient information."
-
-7. Respond in the SAME language as the user's question.
+7. Follow the response language explicitly requested for this answer.
 
 8. Keep the response concise, well-structured, and easy to read.
 

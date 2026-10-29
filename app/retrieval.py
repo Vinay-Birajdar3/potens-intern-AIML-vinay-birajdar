@@ -30,8 +30,9 @@ def get_vector_db():
 
     if _vector_db is None:
         _vector_db = Chroma(
-            persist_directory=config.CHROMA_DB_PATH,
-            embedding_function=get_embedding_model()
+            persist_directory=str(config.resolve_chroma_db_path()),
+            collection_name=config.CHROMA_COLLECTION,
+            embedding_function=get_embedding_model(),
         )
 
     return _vector_db
@@ -39,13 +40,34 @@ def get_vector_db():
 
 def retrieve_documents(query: str):
     """
-    Retrieve the most relevant chunks.
-    """
-    db = get_vector_db()
+    Retrieve unique, sufficiently close chunks from the existing vector index.
 
+    Chroma returns squared-L2 distances for this index; lower scores are better.
+    """
+    normalized_query = " ".join(query.split())
+    if not normalized_query:
+        return []
+
+    db = get_vector_db()
     results = db.similarity_search_with_score(
-        query=query,
-        k=config.TOP_K
+        query=normalized_query,
+        k=max(config.TOP_K, config.RETRIEVAL_FETCH_K),
     )
 
-    return results
+    unique_results = []
+    seen_chunks = set()
+
+    for document, distance in results:
+        if distance > config.MAX_RETRIEVAL_DISTANCE:
+            continue
+
+        normalized_content = " ".join(document.page_content.casefold().split())
+        if not normalized_content or normalized_content in seen_chunks:
+            continue
+
+        seen_chunks.add(normalized_content)
+        unique_results.append((document, distance))
+        if len(unique_results) == config.TOP_K:
+            break
+
+    return unique_results

@@ -1,0 +1,7 @@
+-r requirements.evaluation.txt
+
+# Used only by the standalone Ragas version check and local experimentation.
+ragas>=0.2.0
+datasets
+pandas
+pytest>=8.0.0

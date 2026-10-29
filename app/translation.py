@@ -1,11 +1,10 @@
-from groq import Groq
-
 from app import config
-
-client = Groq(api_key=config.GROQ_API_KEY)
+from app.llm import get_groq_client
 
 
 def detect_language(text: str):
+    if text.isascii():
+        return "english"
 
     prompt = f"""
 Identify the language of the following text.
@@ -20,9 +19,10 @@ Text:
 {text}
 """
 
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+    response = get_groq_client().chat.completions.create(
+        model=config.GROQ_MODEL,
         temperature=0,
+        max_completion_tokens=16,
         messages=[
             {
                 "role": "user",
@@ -31,7 +31,10 @@ Text:
         ]
     )
 
-    return response.choices[0].message.content.strip().lower()
+    language = (response.choices[0].message.content or "").strip().lower()
+    if language not in {"english", "hindi", "marathi"}:
+        raise ValueError(f"Unsupported detected language: {language or 'empty response'}")
+    return language
 
 
 def translate_to_english(text: str):
@@ -44,9 +47,10 @@ Return ONLY the translated text.
 {text}
 """
 
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+    response = get_groq_client().chat.completions.create(
+        model=config.GROQ_MODEL,
         temperature=0,
+        max_completion_tokens=config.GROQ_MAX_COMPLETION_TOKENS,
         messages=[
             {
                 "role": "user",
@@ -55,7 +59,10 @@ Return ONLY the translated text.
         ]
     )
 
-    return response.choices[0].message.content.strip()
+    translated_text = response.choices[0].message.content
+    if translated_text is None or not translated_text.strip():
+        raise RuntimeError("The language model returned an empty translation.")
+    return translated_text.strip()
 
 
 def translate_from_english(text: str, language: str):
@@ -71,9 +78,10 @@ Return ONLY the translated text.
 {text}
 """
 
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+    response = get_groq_client().chat.completions.create(
+        model=config.GROQ_MODEL,
         temperature=0,
+        max_completion_tokens=config.GROQ_MAX_COMPLETION_TOKENS,
         messages=[
             {
                 "role": "user",
@@ -82,4 +90,7 @@ Return ONLY the translated text.
         ]
     )
 
-    return response.choices[0].message.content.strip()
+    translated_text = response.choices[0].message.content
+    if translated_text is None or not translated_text.strip():
+        raise RuntimeError("The language model returned an empty translation.")
+    return translated_text.strip()

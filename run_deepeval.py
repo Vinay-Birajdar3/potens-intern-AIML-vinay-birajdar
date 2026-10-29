@@ -5,9 +5,10 @@ Set DEEPEVAL_GROQ_MODEL to use a different Groq judge model.
 """
 
 import json
-from pathlib import Path
 
 from app.deepeval_integration import run_rag_evaluation
+from app.evaluation import record_evaluation
+from app import config
 from app.rag import generate_answer
 from app.retrieval import retrieve_documents
 
@@ -49,12 +50,27 @@ def main() -> None:
             retrieval_context=contexts,
             expected_answer=case["expected_answer"],
         )
+        evaluation = {
+            "evaluator": "deepeval",
+            "evaluation_status": "completed",
+            **{
+                metric: values["score"]
+                for metric, values in metrics.items()
+            },
+            "metric_reasons": {
+                metric: values["reason"]
+                for metric, values in metrics.items()
+            },
+        }
+        record_evaluation(
+            case["question"],
+            response,
+            evaluation,
+        )
         results.append({"question": case["question"], "metrics": metrics})
 
-    output_path = Path("deepeval_report.json")
-    output_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
     print(json.dumps(results, indent=2))
-    print(f"\nReport saved to {output_path.resolve()}")
+    print(f"\nReport updated at {config.RAG_EVAL_REPORT_PATH}")
 
 
 if __name__ == "__main__":

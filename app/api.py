@@ -1,19 +1,52 @@
 import time
+import secrets
+from typing import Literal
 
-from fastapi import APIRouter
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, Field, field_validator
 
+from app import config
 from app.retrieval import retrieve_documents
 from app.rag import generate_answer
 from app.contradiction import check_contradiction
 from app.translation import (
     detect_language,
     translate_to_english,
-    translate_from_english
 )
 from app.evaluation import evaluate_question
 
 router = APIRouter()
+bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def require_api_key(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+):
+    if not config.APP_API_KEY:
+        if config.APP_ENV == "production":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="API authentication is not configured.",
+            )
+        return
+
+    if config.APP_ENV == "production" and len(config.APP_API_KEY) < 32:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="API authentication is not configured securely.",
+        )
+
+    if (
+        credentials is None
+        or credentials.scheme.lower() != "bearer"
+        or not secrets.compare_digest(credentials.credentials, config.APP_API_KEY)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="A valid bearer token is required.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 # -----------------------------
@@ -21,55 +54,73 @@ router = APIRouter()
 # -----------------------------
 
 class AskRequest(BaseModel):
-    question: str
+    question: str = Field(min_length=1, max_length=config.MAX_QUESTION_CHARS)
+
+    @field_validator("question")
+    @classmethod
+    def trim_question(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Question must not be blank.")
+        return value
 
 
 class ContradictRequest(BaseModel):
-    document1: str
-    document2: str
-    topic: str
+    document1: Literal[
+        "employee_handbook",
+        "leave_policy",
+        "work_from_home",
+        "travel_policy",
+        "information_security",
+        "code_of_conduct",
+    ]
+    document2: Literal[
+        "employee_handbook",
+        "leave_policy",
+        "work_from_home",
+        "travel_policy",
+        "information_security",
+        "code_of_conduct",
+    ]
+    topic: str = Field(min_length=1, max_length=200)
+
+    @field_validator("topic")
+    @classmethod
+    def trim_topic(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Topic must not be blank.")
+        return value
 
 
 # -----------------------------
 # Ask Endpoint
 # -----------------------------
 
-@router.post("/ask")
+@router.post("/ask", dependencies=[Depends(require_api_key)])
 def ask_question(request: AskRequest):
     start_time = time.perf_counter()
 
-    # Detect input language
     language = detect_language(request.question)
-
-    # Translate to English if necessary
     english_question = request.question
 
     if language != "english":
         english_question = translate_to_english(request.question)
 
-    # Retrieve relevant chunks
     retrieved_docs = retrieve_documents(english_question)
 
-    # Generate answer in English
     response = generate_answer(
         english_question,
-        retrieved_docs
+        retrieved_docs,
+        response_language=language,
     )
 
     evaluation = evaluate_question(
         english_question,
         retrieved_docs,
         response,
-        latency_seconds=time.perf_counter() - start_time
+        latency_seconds=time.perf_counter() - start_time,
     )
-    evaluation["latency_seconds"] = round(time.perf_counter() - start_time, 3)
-
-    # Translate answer back to original language
-    if language != "english":
-        response["answer"] = translate_from_english(
-            response["answer"],
-            language
-        )
 
     response["evaluation"] = evaluation
 
@@ -80,7 +131,7 @@ def ask_question(request: AskRequest):
 # Contradict Endpoint
 # -----------------------------
 
-@router.post("/contradict")
+@router.post("/contradict", dependencies=[Depends(require_api_key)])
 def contradict(request: ContradictRequest):
 
     result = check_contradiction(

@@ -1,0 +1,2 @@
+-r requirements.txt
+# DeepEval is installed with the runtime requirements for per-request scoring.

@@ -1,15 +1,42 @@
-FROM python:3.11
+FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    HOME=/home/policylens \
+    HF_HOME=/home/policylens/.cache/huggingface
+
 COPY requirements.txt .
 
-RUN python -m pip install --upgrade pip setuptools wheel
+RUN python -m pip install --upgrade pip setuptools wheel \
+    && python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.6.0+cpu \
+    && python -m pip install --prefer-binary -r requirements.txt
 
-RUN pip install --no-cache-dir --prefer-binary -r requirements.txt
+RUN groupadd --gid 10001 policylens \
+    && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin policylens \
+    && mkdir -p /home/policylens/.cache/huggingface /app/chroma_db \
+    && chown -R 10001:10001 /home/policylens /app
 
-COPY . .
+COPY --chown=10001:10001 . .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+USER 10001:10001
+
+FROM runtime AS evaluation
+
+USER root
+
+COPY requirements.evaluation.txt .
+
+RUN python -m pip install --prefer-binary -r requirements.evaluation.txt
+
+USER 10001:10001
+
+CMD ["python", "run_deepeval.py"]
+
+FROM runtime AS backend
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--limit-concurrency", "16", "--timeout-keep-alive", "5"]
