@@ -1,9 +1,13 @@
+import logging
+import time
+
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 
 from app import config
 
 
+logger = logging.getLogger(__name__)
 _embedding_model = None
 _vector_db = None
 
@@ -36,6 +40,17 @@ def get_vector_db():
         )
 
     return _vector_db
+
+
+def warm_up_retrieval():
+    """Load the embedding model and vector index before accepting requests."""
+    start_time = time.perf_counter()
+    get_vector_db()
+    get_embedding_model().embed_query("PolicyLens retrieval warmup")
+    logger.info(
+        "Search model and vector index warmed in %.2f seconds.",
+        time.perf_counter() - start_time,
+    )
 
 
 def retrieve_documents(query: str):

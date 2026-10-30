@@ -194,6 +194,10 @@ Open the UI at `http://localhost:8501` and the API documentation at
 `http://localhost:8000/docs`. The Nginx frontend proxies API requests to the Docker backend and keeps
 `APP_API_KEY` out of browser code.
 
+The backend warms the local embedding model and vector index before reporting
+ready. A first deployment may take longer to start while model weights are
+loaded or downloaded, but that setup time is kept out of the first search.
+
 The existing `./chroma_db` directory is mounted into the backend container, so
 indexed documents persist across rebuilds. Compose points the new index to
 `./chroma_db/index` and continues to read the existing root-level index until
@@ -221,11 +225,12 @@ docker compose down
 
 # DeepEval RAG evaluation
 
-DeepEval evaluates every live answer using LLM-as-a-judge metrics for answer
-relevancy, faithfulness, and contextual relevancy. Golden answers also enable
-contextual precision and recall. Live scoring makes additional paid model calls
-and increases request latency. The latest 100 results are written as an Excel
-workbook outside the project to `../rag-evaluations/rag_evaluation_report.xlsx` (or the configured
+DeepEval evaluates every live answer in the background using LLM-as-a-judge
+metrics for answer relevancy, faithfulness, and contextual relevancy. Golden
+answers also enable contextual precision and recall. Live scoring makes
+additional paid model calls but does not delay delivery of the answer. The
+latest 100 results are written as an Excel workbook outside the project to
+`../rag-evaluations/rag_evaluation_report.xlsx` (or the configured
 `RAG_EVAL_REPORT_PATH`).
 
 ```bash

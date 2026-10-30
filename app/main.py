@@ -1,18 +1,32 @@
 import logging
+import logging
 import sqlite3
+from contextlib import asynccontextmanager
+from time import perf_counter
 
 import chromadb
 from fastapi import FastAPI, HTTPException, status
+from starlette.concurrency import run_in_threadpool
 
 from app import config
 from app.api import router
+from app.retrieval import warm_up_retrieval
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="PolicyLens API",
-    version="1.0.0"
-)
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    start_time = perf_counter()
+    await run_in_threadpool(warm_up_retrieval)
+    logger.info(
+        "PolicyLens startup search warmup completed in %.2f seconds.",
+        perf_counter() - start_time,
+    )
+    yield
+
+
+app = FastAPI(title="PolicyLens API", version="1.0.0", lifespan=lifespan)
 
 app.include_router(router)
 

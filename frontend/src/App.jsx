@@ -80,6 +80,54 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const evaluationId = answer?.evaluation?.evaluation_id;
+    if (!evaluationId || answer.evaluation.evaluation_status !== "pending") return undefined;
+
+    let active = true;
+    let failures = 0;
+    let timer;
+    const pollEvaluation = async () => {
+      try {
+        const evaluation = await apiRequest(`evaluation/${evaluationId}`);
+        if (!active) return;
+        failures = 0;
+        setAnswer((current) => (
+          current?.evaluation?.evaluation_id === evaluationId
+            ? { ...current, evaluation }
+            : current
+        ));
+        if (evaluation.evaluation_status === "pending") {
+          timer = window.setTimeout(pollEvaluation, 1500);
+        }
+      } catch {
+        if (!active) return;
+        failures += 1;
+        if (failures >= 3) {
+          setAnswer((current) => (
+            current?.evaluation?.evaluation_id === evaluationId
+              ? {
+                  ...current,
+                  evaluation: {
+                    ...current.evaluation,
+                    evaluation_status: "unavailable",
+                    evaluation_error: "Evaluation status could not be retrieved.",
+                  },
+                }
+              : current
+          ));
+        } else {
+          timer = window.setTimeout(pollEvaluation, 3000);
+        }
+      }
+    };
+    timer = window.setTimeout(pollEvaluation, 1500);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [answer?.evaluation?.evaluation_id, answer?.evaluation?.evaluation_status]);
+
   async function submitQuestion(event) {
     event.preventDefault();
     if (!question.trim() || asking) return;
@@ -231,7 +279,7 @@ function App() {
                     <div className="evaluation-summary">
                       <div className="citation-heading">
                         <h3>Live RAG evaluation</h3>
-                        <span>LLM judge · adds latency and model cost</span>
+                        <span>LLM judge · runs after the answer</span>
                       </div>
                       <div className="evaluation-metrics">
                         {[
@@ -249,6 +297,11 @@ function App() {
                         Evaluation completed in {answer.evaluation.evaluation_latency_seconds ?? "—"} sec.
                       </p>
                     </div>
+                  )}
+                  {answer.evaluation?.evaluation_status === "pending" && (
+                    <p className="evaluation-pending" role="status">
+                      Your answer is ready. RAG evaluation is running in the background and will be added to the Excel report.
+                    </p>
                   )}
                   {answer.evaluation?.evaluation_status === "unavailable" && (
                     <p className="notice error-notice" role="status">

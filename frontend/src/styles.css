@@ -138,6 +138,7 @@ textarea:focus, input:focus, select:focus { border-color: #839bf4; box-shadow: 0
 .evaluation-metric span { color: #8791a0; font-size: 10px; }
 .evaluation-metric strong { color: #2f3c51; font: 700 16px "Segoe UI", sans-serif; }
 .evaluation-latency { margin: 8px 0 0; color: #9aa3b0; font-size: 10px; }
+.evaluation-pending { margin: 18px 0 0; color: #778294; font-size: 11px; line-height: 1.5; }
 
 .select-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 19px; }
 .select-grid label, .topic-label { display: grid; gap: 7px; color: #687486; font-size: 11px; font-weight: 600; }

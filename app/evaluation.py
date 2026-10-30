@@ -7,6 +7,7 @@ import logging
 import os
 import tempfile
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
@@ -20,7 +21,11 @@ from app.deepeval_integration import run_rag_evaluation
 
 logger = logging.getLogger(__name__)
 _report_lock = Lock()
+_evaluation_jobs_lock = Lock()
+_evaluation_jobs: dict[str, tuple[float, dict]] = {}
 _REPORT_HISTORY_LIMIT = 100
+_EVALUATION_JOB_LIMIT = 256
+_EVALUATION_JOB_TTL_SECONDS = 1800
 _REPORT_SHEET = "RAG Evaluations"
 _REPORT_HEADERS = [
     "Evaluated at (UTC)",
@@ -228,6 +233,81 @@ def _disabled_evaluation(latency_seconds: float):
         "tokens_used": None,
         "cost_per_query": None,
     }
+
+
+def pending_evaluation(latency_seconds: float):
+    return {
+        "evaluator": "deepeval",
+        "evaluation_status": "pending",
+        "answer_relevancy": None,
+        "faithfulness": None,
+        "context_relevancy": None,
+        "context_precision": None,
+        "context_recall": None,
+        "overall_score": None,
+        "metric_reasons": {},
+        "latency_seconds": round(latency_seconds, 3),
+        "evaluation_latency_seconds": None,
+        "tokens_used": None,
+        "cost_per_query": None,
+    }
+
+
+def create_evaluation_job(latency_seconds: float) -> tuple[str, dict]:
+    job_id = uuid.uuid4().hex
+    result = pending_evaluation(latency_seconds)
+    result["evaluation_id"] = job_id
+    with _evaluation_jobs_lock:
+        _purge_expired_evaluation_jobs()
+        while len(_evaluation_jobs) >= _EVALUATION_JOB_LIMIT:
+            oldest_job_id = next(iter(_evaluation_jobs))
+            _evaluation_jobs.pop(oldest_job_id)
+        _evaluation_jobs[job_id] = (time.monotonic(), result)
+    return job_id, result
+
+
+def _purge_expired_evaluation_jobs() -> None:
+    now = time.monotonic()
+    expired_jobs = [
+        job_id
+        for job_id, (created_at, _) in _evaluation_jobs.items()
+        if now - created_at > _EVALUATION_JOB_TTL_SECONDS
+    ]
+    for job_id in expired_jobs:
+        _evaluation_jobs.pop(job_id)
+
+
+def get_evaluation_job(job_id: str) -> dict | None:
+    with _evaluation_jobs_lock:
+        _purge_expired_evaluation_jobs()
+        job = _evaluation_jobs.get(job_id)
+        return dict(job[1]) if job else None
+
+
+def run_evaluation_job(
+    job_id: str,
+    question: str,
+    retrieved_docs,
+    response: dict,
+    latency_seconds: float,
+) -> None:
+    try:
+        result = evaluate_question(
+            question,
+            retrieved_docs,
+            response,
+            latency_seconds=latency_seconds,
+        )
+    except Exception as exc:
+        logger.exception("Live RAG evaluation job %s failed.", job_id)
+        result = _unavailable_evaluation(
+            latency_seconds,
+            f"DeepEval could not run: {exc}",
+        )
+    result["evaluation_id"] = job_id
+    with _evaluation_jobs_lock:
+        if job_id in _evaluation_jobs:
+            _evaluation_jobs[job_id] = (time.monotonic(), result)
 
 
 def evaluate_question(

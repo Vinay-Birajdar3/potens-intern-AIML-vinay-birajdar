@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from app.rag import generate_answer
+from app.rag import _generate_cached_answer, generate_answer
 
 
 def test_no_retrieved_context_abstains_without_calling_model():
@@ -55,3 +55,32 @@ def test_generation_uses_configured_language_model_and_language():
     assert call["model"] == "test-model"
     assert "Answer in Hindi" in call["messages"][1]["content"]
     assert "[1]" in call["messages"][1]["content"]
+
+
+def test_identical_grounded_prompt_uses_cached_answer():
+    document = type(
+        "Document",
+        (),
+        {
+            "page_content": "Employees need manager approval.",
+            "metadata": {"source_name": "Leave_Policy.pdf", "page": 0, "chunk_id": 1},
+        },
+    )()
+    client = MagicMock()
+    client.chat.completions.create.return_value = SimpleNamespace(
+        choices=[
+            SimpleNamespace(message=SimpleNamespace(content="Manager approval is required.")),
+        ],
+    )
+    _generate_cached_answer.cache_clear()
+
+    with (
+        patch("app.rag.get_groq_client", return_value=client),
+        patch("app.rag.config.GROQ_MODEL", "cache-test-model"),
+    ):
+        first = generate_answer("Is approval needed?", [(document, 0.2)])
+        second = generate_answer("Is approval needed?", [(document, 0.2)])
+
+    assert first == second
+    client.chat.completions.create.assert_called_once()
+    _generate_cached_answer.cache_clear()

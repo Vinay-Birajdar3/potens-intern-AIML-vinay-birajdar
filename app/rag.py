@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from app import config
 from app.llm import get_groq_client
 from app.prompts import SYSTEM_PROMPT
@@ -7,6 +9,27 @@ ABSTENTION_MESSAGES = {
     "hindi": "दिए गए दस्तावेज़ों में पर्याप्त जानकारी उपलब्ध नहीं है।",
     "marathi": "दिलेल्या दस्तऐवजांमध्ये पुरेशी माहिती उपलब्ध नाही.",
 }
+
+
+@lru_cache(maxsize=128)
+def _generate_cached_answer(
+    model: str,
+    max_completion_tokens: int,
+    user_prompt: str,
+) -> str:
+    response = get_groq_client().chat.completions.create(
+        model=model,
+        temperature=0,
+        max_completion_tokens=max_completion_tokens,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+    answer = response.choices[0].message.content
+    if answer is None or not answer.strip():
+        raise RuntimeError("The language model returned an empty answer.")
+    return answer.strip()
 
 
 def generate_answer(
@@ -105,27 +128,13 @@ USER QUESTION
 {question}
 """
 
-    response = get_groq_client().chat.completions.create(
-        model=config.GROQ_MODEL,
-        temperature=0,
-        max_completion_tokens=config.GROQ_MAX_COMPLETION_TOKENS,
-        messages=[
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT
-            },
-            {
-                "role": "user",
-                "content": user_prompt
-            }
-        ]
+    answer = _generate_cached_answer(
+        config.GROQ_MODEL,
+        config.GROQ_MAX_COMPLETION_TOKENS,
+        user_prompt,
     )
 
-    answer = response.choices[0].message.content
-    if answer is None or not answer.strip():
-        raise RuntimeError("The language model returned an empty answer.")
-
     return {
-        "answer": answer.strip(),
+        "answer": answer,
         "citations": citations
     }
