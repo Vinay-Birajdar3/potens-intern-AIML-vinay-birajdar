@@ -7,6 +7,13 @@ const documents = [
   ["travel_policy", "Travel expenses"],
   ["information_security", "Information security"],
   ["code_of_conduct", "Code of conduct"],
+  ["anti_harassment", "Respect at work & equal opportunity"],
+  ["data_privacy", "Data privacy & retention"],
+  ["employee_benefits", "Benefits & wellness"],
+  ["procurement_vendor", "Procurement & vendors"],
+  ["incident_response", "Incident response & continuity"],
+  ["conflict_of_interest", "Conflict of interest"],
+  ["remote_work_equipment", "Remote work & equipment"],
 ];
 
 const examples = [

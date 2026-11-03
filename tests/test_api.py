@@ -2,7 +2,19 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
+from app.api import ContradictRequest
 from app.main import app
+
+
+def test_new_sample_policy_ids_are_available_for_comparison():
+    request = ContradictRequest(
+        document1="data_privacy",
+        document2="employee_benefits",
+        topic="personal information",
+    )
+
+    assert request.document1 == "data_privacy"
+    assert request.document2 == "employee_benefits"
 
 
 def test_ask_returns_while_live_evaluation_runs_in_background():

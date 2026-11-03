@@ -15,6 +15,34 @@ def test_no_retrieved_context_abstains_without_calling_model():
     get_client.assert_not_called()
 
 
+def test_markdown_policy_citation_has_no_fake_page_number():
+    document = type(
+        "Document",
+        (),
+        {
+            "page_content": "Sample policy content.",
+            "metadata": {
+                "source_name": "Data_Privacy_and_Retention_Policy.md",
+                "chunk_id": 1,
+            },
+        },
+    )()
+    client = MagicMock()
+    client.chat.completions.create.return_value = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content="A grounded answer."))],
+    )
+    _generate_cached_answer.cache_clear()
+
+    with patch("app.rag.get_groq_client", return_value=client):
+        result = generate_answer("What is the policy?", [(document, 0.1)])
+
+    assert result["citations"][0]["page"] is None
+    assert "Page: Not applicable" in client.chat.completions.create.call_args.kwargs[
+        "messages"
+    ][1]["content"]
+    _generate_cached_answer.cache_clear()
+
+
 def test_non_english_abstention_uses_the_requested_language():
     with patch("app.rag.get_groq_client") as get_client:
         result = generate_answer("Translated question", [], response_language="hindi")

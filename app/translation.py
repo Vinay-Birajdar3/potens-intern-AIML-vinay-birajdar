@@ -22,7 +22,8 @@ Text:
     response = get_groq_client().chat.completions.create(
         model=config.GROQ_MODEL,
         temperature=0,
-        max_completion_tokens=16,
+        reasoning_effort="low",
+        max_completion_tokens=64,
         messages=[
             {
                 "role": "user",
@@ -50,6 +51,7 @@ Return ONLY the translated text.
     response = get_groq_client().chat.completions.create(
         model=config.GROQ_MODEL,
         temperature=0,
+        reasoning_effort="low",
         max_completion_tokens=config.GROQ_MAX_COMPLETION_TOKENS,
         messages=[
             {
@@ -81,6 +83,7 @@ Return ONLY the translated text.
     response = get_groq_client().chat.completions.create(
         model=config.GROQ_MODEL,
         temperature=0,
+        reasoning_effort="low",
         max_completion_tokens=config.GROQ_MAX_COMPLETION_TOKENS,
         messages=[
             {

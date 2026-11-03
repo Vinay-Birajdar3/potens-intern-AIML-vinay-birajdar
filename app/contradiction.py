@@ -12,7 +12,14 @@ DOCUMENT_MAP = {
     "work_from_home": "Work_From_Home_Policy.pdf",
     "travel_policy": "Travel_Expense_Policy.pdf",
     "information_security": "Information_Security_Policy.pdf",
-    "code_of_conduct": "Code_of_Conduct.pdf",
+    "code_of_conduct": "Code_Of_Conduct_Policy.md",
+    "anti_harassment": "Anti_Harassment_and_Equal_Opportunity_Policy.md",
+    "data_privacy": "Data_Privacy_and_Retention_Policy.md",
+    "employee_benefits": "Employee_Benefits_and_Wellness_Policy.md",
+    "procurement_vendor": "Procurement_and_Vendor_Management_Policy.md",
+    "incident_response": "Incident_Response_and_Business_Continuity_Policy.md",
+    "conflict_of_interest": "Conflict_of_Interest_Policy.md",
+    "remote_work_equipment": "Remote_Work_and_Equipment_Guidelines.md",
 }
 
 

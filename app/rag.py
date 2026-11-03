@@ -20,6 +20,7 @@ def _generate_cached_answer(
     response = get_groq_client().chat.completions.create(
         model=model,
         temperature=0,
+        reasoning_effort="low",
         max_completion_tokens=max_completion_tokens,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -59,7 +60,8 @@ def generate_answer(
             doc.metadata.get("source_name")
             or doc.metadata.get("source", "Unknown").replace("\\", "/").rsplit("/", 1)[-1]
         )
-        page = doc.metadata.get("page", 0) + 1
+        page_index = doc.metadata.get("page")
+        page = page_index + 1 if isinstance(page_index, int) else None
         chunk_id = doc.metadata.get("chunk_id", "N/A")
         snippet = doc.page_content.strip()
         remaining_chars = config.MAX_CONTEXT_CHARS - context_chars
@@ -71,7 +73,7 @@ def generate_answer(
         context_parts.append(
             f"""
 Source [{index}]: {source}
-Page: {page}
+Page: {page if page is not None else "Not applicable"}
 Chunk: {chunk_id}
 
 Content:

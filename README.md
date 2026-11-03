@@ -16,6 +16,9 @@ PolicyLens is a multilingual **Retrieval-Augmented Generation (RAG)** system tha
 * 🗂️ ChromaDB Vector Database
 * 🤖 Groq LLM Integration
 
+For an easy-to-follow explanation of the request flow, libraries, and RAG
+techniques, see [architecture.md](architecture.md).
+
 ---
 
 ## 🛠️ Tech Stack
@@ -142,7 +145,7 @@ python -m app.ingest
 
 This will:
 
-* Load PDF documents
+* Load PDF and Markdown policy documents
 * Split documents into chunks
 * Generate embeddings
 * Store vectors in ChromaDB

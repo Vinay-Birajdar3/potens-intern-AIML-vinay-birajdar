@@ -7,7 +7,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from langchain_community.document_loaders import PyPDFDirectoryLoader
+from langchain_community.document_loaders import DirectoryLoader, PyPDFDirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
@@ -20,6 +20,15 @@ from app import config
 
 logger = logging.getLogger(__name__)
 _embedding_model = None
+
+
+def _move_index_directory(source: Path, destination: Path) -> None:
+    try:
+        os.replace(source, destination)
+    except PermissionError:
+        # Windows bind mounts may reject directory renames even when copying is allowed.
+        shutil.copytree(source, destination)
+        shutil.rmtree(source)
 
 
 def get_embedding_model():
@@ -36,8 +45,16 @@ def load_documents():
     if not documents_path.is_dir():
         raise FileNotFoundError(f"Documents directory does not exist: {documents_path}")
 
-    loader = PyPDFDirectoryLoader(config.DOCUMENTS_PATH)
-    documents = loader.load()
+    pdf_documents = PyPDFDirectoryLoader(config.DOCUMENTS_PATH).load()
+    markdown_documents = DirectoryLoader(
+        config.DOCUMENTS_PATH,
+        glob="**/*.md",
+        loader_cls=TextLoader,
+        loader_kwargs={"encoding": "utf-8"},
+        show_progress=False,
+        use_multithreading=False,
+    ).load()
+    documents = pdf_documents + markdown_documents
 
     if not documents:
         raise ValueError(f"No readable PDF pages were found in {documents_path}.")
@@ -130,13 +147,20 @@ def create_vector_store(chunks):
                 tempfile.mkdtemp(prefix=f".{target.name}.backup-", dir=target.parent)
             )
             backup.rmdir()
-            os.replace(target, backup)
+            try:
+                _move_index_directory(target, backup)
+            except OSError:
+                if backup.exists():
+                    shutil.rmtree(backup)
+                raise
 
         try:
-            os.replace(staging, target)
+            _move_index_directory(staging, target)
         except OSError:
-            if backup is not None and backup.exists() and not target.exists():
-                os.replace(backup, target)
+            if target.exists():
+                shutil.rmtree(target)
+            if backup is not None and backup.exists():
+                _move_index_directory(backup, target)
             raise
 
         if backup is not None:

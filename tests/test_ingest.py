@@ -10,18 +10,46 @@ from app.ingest import load_documents, split_documents
 
 
 def test_load_documents_returns_loaded_documents(monkeypatch):
-    class FakeLoader:
+    class FakePdfLoader:
         def __init__(self, path):
             self.path = path
 
         def load(self):
-            return ["doc"]
+            return ["pdf doc"]
 
-    monkeypatch.setattr("app.ingest.PyPDFDirectoryLoader", FakeLoader)
+    class FakeMarkdownLoader:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def load(self):
+            return ["markdown doc"]
+
+    monkeypatch.setattr("app.ingest.PyPDFDirectoryLoader", FakePdfLoader)
+    monkeypatch.setattr("app.ingest.DirectoryLoader", FakeMarkdownLoader)
+    documents = load_documents()
+
+    assert documents == ["pdf doc", "markdown doc"]
+
+
+def test_load_documents_reads_utf8_markdown_policies(tmp_path, monkeypatch):
+    policy_path = tmp_path / "Data_Privacy_Policy.md"
+    policy_path.write_text("# गोपनीयता\n\nProtect personal data.", encoding="utf-8")
+
+    class EmptyPdfLoader:
+        def __init__(self, path):
+            self.path = path
+
+        def load(self):
+            return []
+
+    monkeypatch.setattr("app.ingest.config.DOCUMENTS_PATH", str(tmp_path))
+    monkeypatch.setattr("app.ingest.PyPDFDirectoryLoader", EmptyPdfLoader)
 
     documents = load_documents()
 
-    assert documents == ["doc"]
+    assert len(documents) == 1
+    assert documents[0].page_content == "# गोपनीयता\n\nProtect personal data."
+    assert documents[0].metadata["source"].endswith("Data_Privacy_Policy.md")
 
 
 def test_split_documents_returns_chunks_for_loaded_docs():
@@ -136,6 +164,42 @@ class VectorStoreTests(unittest.TestCase):
 
             self.assertFalse((target / "existing.txt").exists())
             self.assertEqual((target / "chroma.sqlite3").read_text(), "new index")
+
+    def test_permission_error_uses_copy_swap_and_replaces_existing_index(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            target = Path(temporary_directory) / "index"
+            target.mkdir()
+            (target / "existing.txt").write_text("old index")
+            chunk = type(
+                "Chunk",
+                (),
+                {
+                    "page_content": "Policy excerpt.",
+                    "metadata": {
+                        "source_name": "Policy.md",
+                        "page": 0,
+                        "chunk_id": 1,
+                    },
+                },
+            )()
+
+            def build_index(*, persist_directory, **kwargs):
+                (Path(persist_directory) / "chroma.sqlite3").write_text("new index")
+                return object()
+
+            with (
+                patch("app.ingest.config.CHROMA_DB_PATH", str(target)),
+                patch("app.ingest.get_embedding_model", return_value=object()),
+                patch("app.ingest.Chroma.from_documents", side_effect=build_index),
+                patch("app.ingest.os.replace", side_effect=PermissionError("bind mount")),
+            ):
+                from app.ingest import create_vector_store
+
+                create_vector_store([chunk])
+
+            self.assertFalse((target / "existing.txt").exists())
+            self.assertEqual((target / "chroma.sqlite3").read_text(), "new index")
+            self.assertEqual([path.name for path in target.parent.iterdir()], ["index"])
 
     def test_real_chroma_index_is_swapped_from_staging(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

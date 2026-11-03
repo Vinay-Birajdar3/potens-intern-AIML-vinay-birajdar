@@ -78,6 +78,13 @@ class ContradictRequest(BaseModel):
         "travel_policy",
         "information_security",
         "code_of_conduct",
+        "anti_harassment",
+        "data_privacy",
+        "employee_benefits",
+        "procurement_vendor",
+        "incident_response",
+        "conflict_of_interest",
+        "remote_work_equipment",
     ]
     document2: Literal[
         "employee_handbook",
@@ -86,6 +93,13 @@ class ContradictRequest(BaseModel):
         "travel_policy",
         "information_security",
         "code_of_conduct",
+        "anti_harassment",
+        "data_privacy",
+        "employee_benefits",
+        "procurement_vendor",
+        "incident_response",
+        "conflict_of_interest",
+        "remote_work_equipment",
     ]
     topic: str = Field(min_length=1, max_length=200)
 
