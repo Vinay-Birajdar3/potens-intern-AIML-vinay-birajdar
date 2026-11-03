@@ -66,17 +66,24 @@ ChromaDB finds the closest policy chunks
 Keep close, non-duplicate chunks and their source/page details
   |
   v
-Groq language model writes a short answer using only those chunks
+Groq language model returns short claims with exact quotes from those chunks
   |
   v
-Website shows the answer and citations
+Backend verifies every quote against its cited chunk; unsupported output abstains
+  |
+  v
+Website shows the answer and the exact supporting quotes
   |
   +---- DeepEval checks the answer in the background and updates Excel
 ```
 
-The answer prompt asks the model to respond in the question's language. If
-there is no useful evidence, PolicyLens returns a “not enough information”
-message instead of making up a policy answer.
+The answer prompt asks the model to respond in the question's language. The
+backend rejects malformed responses or any claim whose supporting quote is not
+present in the cited chunk; when this check fails, PolicyLens returns a “not
+enough information” message. The citation displays the verified quote so the
+answer can be checked against its source. This reduces unsupported answers but
+cannot guarantee that a model's paraphrase is always correct; verify important
+decisions against the cited policy.
 
 ## How policy comparison works
 
@@ -116,7 +123,8 @@ is not enough information to compare them.
 | **Duplicate filtering** | Avoids giving repeated passages to the answer model. |
 | **Grounded generation** | Tells the model to use only the retrieved policy text, not outside knowledge. |
 | **Abstention** | Returns a clear “not enough information” answer when the documents do not support a response. |
-| **Citations** | Shows the source PDF, page, and text snippet used for the answer. |
+| **Citations** | Shows the source document, page when available, and supporting text snippet. |
+| **Evidence validation** | Requires each answer claim to include an exact quote from its cited retrieved chunk; rejects claims without a matching quote. |
 | **Startup warmup** | Loads the embedding model and vector index before the API reports ready, avoiding a long first search. |
 | **Answer cache** | Reuses an answer only when the exact grounded prompt (including its retrieved evidence and answer language) matches. |
 | **Background evaluation** | Sends the answer first; evaluation and Excel writing happen afterward so they do not hold up the response. |
